@@ -1,0 +1,81 @@
+#!/bin/bash
+
+#SBATCH --job-name=example-jobname
+#SBATCH --partition=example-partition
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --constraint=v100x4
+#SBATCH --output=/path/to/logdir/%x.o%j
+#SBATCH --error=/path/to/logdir/%x.o%j
+
+msg() { printf "$*\n" >&2; }
+die() { msg "!!! $*"; exit 1; }
+log() { msg "### $*"; }
+
+module load openmpi/4.1.3-mlnx-gcc
+module unload cuda
+module load cuda/11.7.1
+module load cuda/nccl_2.11.4-1+cuda11.4
+module load python/3.10.7
+
+TEST_NAME="$SLURM_JOB_NAME"
+DIST="pytorch"
+TRAIN_SCRIPT_NAME="base.py"
+GPUS_PER_NODE=1 # Dicates the num of processes per node
+LAUNCH_TYPE=0   # Dictates how the job is launched needs to correlate with the 
+                # TRAIN_SCRIPT_NAME
+
+ROOT="/path/to/ml-dist"
+DATA="$ROOT/data/$DIST"
+TRAIN_SCRIPT="$ROOT/$DIST/$TRAIN_SCRIPT_NAME"
+OUTPUT="$ROOT/output/$TEST_NAME-$(date +%Y-%m-%d--%H.%M.%S)"
+VENV="$ROOT/venv"
+
+log "TEST_NAME: $TEST_NAME"
+log "TRAIN_SCRIPT: $TRAIN_SCRIPT"
+log "OUTPUT: $OUTPUT"
+log "DIST: $DIST"
+log "LAUNCH_TYPE: $LAUNCH_TYPE"
+log "VENV: $VENV"
+
+# Basic Checks
+[[ -f "$TRAIN_SCRIPT" ]] || die "Can't find $TRAIN_SCRIPT"
+
+[[ -f "$VENV/bin/activate" ]] || die "Can't find activate in $VENV"
+
+source "$VENV/bin/activate"
+[[ -z "$VIRTUAL_ENV" ]] && die "Can't activate $VENV"
+
+mkdir $OUTPUT
+[[ -d "$OUTPUT" ]] || die "OUTPUT directory not created"
+
+TMPIR=$TMPDIR_SHM # Stops pytorch error from being on a network filesystem
+
+master_addr=$(scontrol show hostname "$SLURM_JOB_NODELIST" | head -n 1)
+export MASTER_ADDR=${master_addr}
+
+srunArgs="
+    --wait=60
+    --kill-on-bad-exit=1
+"
+
+trainArgs="
+    --data-dir=$DATA
+    --output-dir=$OUTPUT
+"
+
+torchrunArgs="
+    --nproc_per_node $GPUS_PER_NODE
+    --nnodes $SLURM_NNODES
+    --rdzv_endpoint $MASTER_ADDR
+    --max_restarts 0
+"
+
+# Different frameworks need to be launched differently
+if [[ "$LAUNCH_TYPE" -eq 0 ]]; then
+    time srun $srunArgs python $TRAIN_SCRIPT $trainArgs
+elif [[ "$LAUNCH_TYPE" -eq 1 ]]; then
+    time srun $srunArgs torchrun $torchrunArgs $TRAIN_SCRIPT $trainArgs
+else
+    die "LAUNCH_TYPE value invalid"
+fi
