@@ -76,7 +76,6 @@ def test(model, device, test_loader):
 
 
 def main():
-    print("TMPDIR: {}".format(os.environ['TMPDIR']))
     # Training settings
     parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
     parser.add_argument('--batch-size', type=int, default=64, metavar='N',
