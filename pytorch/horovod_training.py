@@ -181,7 +181,7 @@ def main():
         test(model, device, test_loader, test_sampler)
         scheduler.step()
 
-    if args.save_model:
+    if args.save_model and hvd.rank() == 0:
         torch.save(
             model.state_dict(), "{}/mnist_cnn.pt".format(args.output_dir))
 
