@@ -68,7 +68,20 @@ torchrunArgs="
     --nproc_per_node $GPUS_PER_NODE
     --nnodes $SLURM_NNODES
     --rdzv_endpoint $MASTER_ADDR
+    --rdzv_backend c10d
     --max_restarts 0
+"
+
+mpiTorchrunArgs="
+    --np $SLURM_JOB_NUM_NODES
+    --bind-to none
+    -map-by slot
+    -x NCCL_DEBUG=INFO
+    -x NCCL_IB_GID_INDEX=3
+    -x LD_LIBRARY_PATH
+    -x PATH
+    -mca pml ob1
+    -mca btl ^openib
 "
 
 mpiArgs="
@@ -76,6 +89,7 @@ mpiArgs="
     --bind-to none 
     -map-by slot
     -x NCCL_DEBUG=INFO
+    -x NCCL_IB_GID_INDEX=3
     -x LD_LIBRARY_PATH
     -x PATH
     -mca pml ob1
@@ -92,7 +106,7 @@ elif [[ "$LAUNCH_TYPE" -eq 1 ]]; then
     # per gpu
     # Uses the number of nodes specified in the slurm variables and the 
     # GPUS_PER_NODE variable
-    time srun $srunArgs torchrun $torchrunArgs $TRAIN_SCRIPT $trainArgs
+    time mpirun $mpiTorchrunArgs torchrun $torchrunArgs $TRAIN_SCRIPT $trainArgs
 elif [[ "$LAUNCH_TYPE" -eq 2 ]]; then
     # Launch using mpi used for horovod
     # Have previously encountered issues using horovodrun for multiNode training
