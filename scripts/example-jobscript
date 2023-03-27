@@ -53,8 +53,11 @@ mkdir $OUTPUT
 
 TMPIR=$TMPDIR_SHM # Stops pytorch error from being on a network filesystem
 
+export XLA_FLAGS="--xla_gpu_cuda_data_dir=$CUDA_PATH" # Fixes xla error in tensorflow
+
 master_addr=$(scontrol show hostname "$SLURM_JOB_NODELIST" | head -n 1)
 export MASTER_ADDR=${master_addr}
+
 
 srunArgs="
     --wait=60
