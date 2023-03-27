@@ -147,21 +147,21 @@ def main():
         transforms.ToTensor(),
         transforms.Normalize((0.1307,), (0.3081,))
     ])
-    dataset1 = datasets.MNIST(args.data_dir, train=True, download=True,
-                              transform=transform)
-    dataset2 = datasets.MNIST(args.data_dir, train=False,
-                              transform=transform)
+    train_dataset = datasets.MNIST(args.data_dir, train=True, download=True,
+                                   transform=transform)
+    test_dataset = datasets.MNIST(args.data_dir, train=False,
+                                  transform=transform)
 
     train_sampler = torch.utils.data.distributed.DistributedSampler(
-        dataset1, num_replicas=hvd.size(), rank=hvd.rank()
+        train_dataset, num_replicas=hvd.size(), rank=hvd.rank()
     )
     test_sampler = torch.utils.data.distributed.DistributedSampler(
-        dataset2, num_replicas=hvd.size(), rank=hvd.rank()
+        test_dataset, num_replicas=hvd.size(), rank=hvd.rank()
     )
     train_loader = torch.utils.data.DataLoader(
-        dataset1, sampler=train_sampler, **train_kwargs)
+        train_dataset, sampler=train_sampler, **train_kwargs)
     test_loader = torch.utils.data.DataLoader(
-        dataset2, sampler=test_sampler, **test_kwargs)
+        test_dataset, sampler=test_sampler, **test_kwargs)
 
     model = Net().to(device)
     optimizer = optim.Adadelta(model.parameters(), lr=args.lr)

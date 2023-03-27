@@ -124,13 +124,13 @@ def main():
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.1307,), (0.3081,))
-        ])
-    dataset1 = datasets.MNIST(args.data_dir, train=True, download=True,
-                              transform=transform)
-    dataset2 = datasets.MNIST(args.data_dir, train=False,
-                              transform=transform)
-    train_loader = torch.utils.data.DataLoader(dataset1, **train_kwargs)
-    test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
+    ])
+    train_dataset = datasets.MNIST(args.data_dir, train=True, download=True,
+                                   transform=transform)
+    test_dataset = datasets.MNIST(args.data_dir, train=False,
+                                  transform=transform)
+    train_loader = torch.utils.data.DataLoader(train_dataset, **train_kwargs)
+    test_loader = torch.utils.data.DataLoader(test_dataset, **test_kwargs)
 
     model = Net().to(device)
     optimizer = optim.Adadelta(model.parameters(), lr=args.lr)
@@ -143,7 +143,7 @@ def main():
 
     if args.save_model:
         torch.save(
-             model.state_dict(), "{}/mnist_cnn.pt".format(args.output_dir))
+            model.state_dict(), "{}/mnist_cnn.pt".format(args.output_dir))
 
 
 if __name__ == '__main__':
