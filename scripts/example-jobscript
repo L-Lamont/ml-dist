@@ -38,6 +38,8 @@ log "DIST: $DIST"
 log "LAUNCH_TYPE: $LAUNCH_TYPE"
 log "VENV: $VENV"
 
+die "This is the example, please update the variables and remove this message"
+
 # Basic Checks
 [[ -f "$TRAIN_SCRIPT" ]] || die "Can't find $TRAIN_SCRIPT"
 
