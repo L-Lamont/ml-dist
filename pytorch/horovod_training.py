@@ -15,12 +15,6 @@ import torch.utils.data.distributed
 import horovod.torch as hvd
 
 
-def init_dist():
-    hvd.init()
-    if torch.cuda.is_available():
-        torch.cuda.set_device(hvd.local_rank())
-
-
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
@@ -58,9 +52,12 @@ def train(args, model, device, train_loader, optimizer, epoch, train_sampler):
         loss.backward()
         optimizer.step()
         if batch_idx % args.log_interval == 0:
+            num_processed = batch_idx * len(data)
+            percentage_processed = 100. * num_processed / \
+                (len(data) * len(train_loader))
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                epoch, batch_idx * len(data), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader), loss.item()))
+                epoch, num_processed, len(data) * len(train_loader),
+                percentage_processed, loss.item()))
             if args.dry_run:
                 break
 
@@ -89,7 +86,7 @@ def test(model, device, test_loader, test_sampler):
     test_loss = metric_average(test_loss, 'avg_loss')
     test_accuracy = metric_average(test_accuracy, 'avg_accuracy')
 
-    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
+    print('\nTest set: Average loss: {:.4f}, Accuracy: {:.4f}%\n'.format(
         test_loss, 100. * test_accuracy))
 
 
@@ -128,8 +125,12 @@ def main():
     if use_cuda:
         device = torch.device("cuda")
     else:
-        print("non-gpu not supported for horovod example")
-        return 1
+        device = torch.device("cpu")
+
+    # Initialize horovod
+    hvd.init()
+    if torch.cuda.is_available():
+        torch.cuda.set_device(hvd.local_rank())
 
     # Scale the learning rate
     args.lr = args.lr * hvd.size()
@@ -138,8 +139,7 @@ def main():
     test_kwargs = {'batch_size': args.test_batch_size}
     if use_cuda:
         cuda_kwargs = {'num_workers': 1,
-                       'pin_memory': True,
-                       'shuffle': True}
+                       'pin_memory': True}
         train_kwargs.update(cuda_kwargs)
         test_kwargs.update(cuda_kwargs)
 
@@ -153,10 +153,10 @@ def main():
                                   transform=transform)
 
     train_sampler = torch.utils.data.distributed.DistributedSampler(
-        train_dataset, num_replicas=hvd.size(), rank=hvd.rank()
+        train_dataset, num_replicas=hvd.size(), rank=hvd.rank(), shuffle=True
     )
     test_sampler = torch.utils.data.distributed.DistributedSampler(
-        test_dataset, num_replicas=hvd.size(), rank=hvd.rank()
+        test_dataset, num_replicas=hvd.size(), rank=hvd.rank(), shuffle=True
     )
     train_loader = torch.utils.data.DataLoader(
         train_dataset, sampler=train_sampler, **train_kwargs)
