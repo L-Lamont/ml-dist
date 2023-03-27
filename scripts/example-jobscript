@@ -21,7 +21,7 @@ module load python/3.10.7
 TEST_NAME="$SLURM_JOB_NAME"
 DIST="pytorch"
 TRAIN_SCRIPT_NAME="base.py"
-GPUS_PER_NODE=1 # Dicates the num of processes per node
+GPUS_PER_NODE=1 # Dicates the num of processes per node (LAUNCH_TYPE 1)
 LAUNCH_TYPE=0   # Dictates how the job is launched needs to correlate with the 
                 # TRAIN_SCRIPT_NAME
 
@@ -71,11 +71,33 @@ torchrunArgs="
     --max_restarts 0
 "
 
+mpiArgs="
+    --np $SLURM_NTASKS
+    --bind-to none 
+    -map-by slot
+    -x NCCL_DEBUG=INFO
+    -x LD_LIBRARY_PATH
+    -x PATH
+    -mca pml ob1
+    -mca btl ^openib
+"
+
 # Different frameworks need to be launched differently
 if [[ "$LAUNCH_TYPE" -eq 0 ]]; then
+    # Generic launcher used for single node non-distributed scripts
     time srun $srunArgs python $TRAIN_SCRIPT $trainArgs
 elif [[ "$LAUNCH_TYPE" -eq 1 ]]; then
+    # Launch using torchrun and srun used for pytorch pytorch
+    # srun launches 1 torchrun process per node which then launches a process 
+    # per gpu
+    # Uses the number of nodes specified in the slurm variables and the 
+    # GPUS_PER_NODE variable
     time srun $srunArgs torchrun $torchrunArgs $TRAIN_SCRIPT $trainArgs
+elif [[ "$LAUNCH_TYPE" -eq 2 ]]; then
+    # Launch using mpi used for horovod
+    # Have previously encountered issues using horovodrun for multiNode training
+    # Uses the number of tasks specified in slurm variables
+    time mpirun $mpiArgs python $TRAIN_SCRIPT $trainArgs
 else
     die "LAUNCH_TYPE value invalid"
 fi
