@@ -74,6 +74,9 @@ def main():
     train_data = train_data.with_options(options)
     test_data = test_data.with_options(options)
 
+    # Scale learning rate
+    args.lr = args.lr * int(os.environ["SLURM_NTASKS"])
+
     with strategy.scope():
         model = tf.keras.Sequential([
             layers.Conv2D(32, 3, activation='relu', input_shape=(28, 28, 1)),
