@@ -58,6 +58,7 @@ export XLA_FLAGS="--xla_gpu_cuda_data_dir=$CUDA_PATH" # Fixes xla error in tenso
 master_addr=$(scontrol show hostname "$SLURM_JOB_NODELIST" | head -n 1)
 export MASTER_ADDR=${master_addr}
 
+unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY
 
 srunArgs="
     --wait=60
@@ -89,7 +90,7 @@ mpiTorchrunArgs="
     -mca btl ^openib
 "
 
-mpiArgs="
+mpiHorovodArgs="
     --np $SLURM_NTASKS
     --bind-to none 
     -map-by slot
@@ -103,7 +104,8 @@ mpiArgs="
 
 # Different frameworks need to be launched differently
 if [[ "$LAUNCH_TYPE" -eq 0 ]]; then
-    # Generic launcher used for single node non-distributed scripts
+    # Generic srun launch
+    # Required launch method for tensorflow_multiGPU as it relies on slurm env variables
     time srun $srunArgs python $TRAIN_SCRIPT $trainArgs
 elif [[ "$LAUNCH_TYPE" -eq 1 ]]; then
     # Launch using torchrun and srun used for pytorch pytorch
@@ -116,7 +118,7 @@ elif [[ "$LAUNCH_TYPE" -eq 2 ]]; then
     # Launch using mpi used for horovod
     # Have previously encountered issues using horovodrun for multiNode training
     # Uses the number of tasks specified in slurm variables
-    time mpirun $mpiArgs python $TRAIN_SCRIPT $trainArgs
+    time mpirun $mpiHorovodArgs python $TRAIN_SCRIPT $trainArgs
 else
     die "LAUNCH_TYPE value invalid"
 fi
