@@ -17,7 +17,11 @@ module load openmpi
 module load cuda
 module load python
 module load gcc
-module load cmake
+
+tensorflow=1
+pytorch=1
+mxnet=1
+horovod=1
 
 ROOT="/path/to/ml-dist"
 cd $ROOT
