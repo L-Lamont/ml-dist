@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=base-jobname
+#SBATCH --job-name=pytorch-jobname
 #SBATCH --partition=example-partition
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
