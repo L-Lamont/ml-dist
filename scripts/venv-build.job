@@ -27,7 +27,7 @@ show_help() {
     msg ""
     msg "--tensorflow-pkg   version of tensorflow to install via pip (default tensorflow)"
     msg "--torch-pkgs       comma separarted list of torch, torchvision & torchaudio versions to install via pip (default torch,torchvision,torchaudio)"
-    msg "--mxnet-pkg        version of mxnet to install via pip (default mxnet-cu117)"
+    msg "--mxnet-pkg        version of mxnet to install via pip (default mxnet-cu112==2.0.0b1, examples use mxnet 2)"
     msg "--horovod-pkg      version of horovod to install (default horovod)"
     msg ""
     msg "--nccl-path        path to nccl install (horovod build will fail without it)"
@@ -50,7 +50,7 @@ set_default_args() {
 
     export TENSORFLOW_PKG="tensorflow"
     export TORCH_PKGS="torch,torchvision,torchaudio"
-    export MXNET_PKG="mxnet-cu117"
+    export MXNET_PKG="mxnet-cu112==2.0.0b1"
     export HOROVOD_PKG="horovod"
 
     export NCCL_PATH="-1"
