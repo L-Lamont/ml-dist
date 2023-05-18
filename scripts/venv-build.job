@@ -1,10 +1,10 @@
 #!/bin/bash
 
 #SBATCH --job-name=venv-build
-#SBATCH --partition=test
+#SBATCH --partition=example-test
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --constraint=v100
+#SBATCH --constraint=a-gpu-constraint
 #SBATCH --output=/path/to/logdir/%x.o%j
 #SBATCH --error=/path/to/logdir/%x.o%j
 
