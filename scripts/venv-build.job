@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=venv-build
-#SBATCH --partition=example-test
+#SBATCH --partition=example-partition
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --constraint=a-gpu-constraint
