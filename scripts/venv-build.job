@@ -5,8 +5,8 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --constraint=v100
-#SBATCH --output=/p9/dug/teamhpc/liaml/ml/examples/ml-dist/logs/%x.o%j
-#SBATCH --error=/p9/dug/teamhpc/liaml/ml/examples/ml-dist/logs/%x.o%j
+#SBATCH --output=/path/to/logdir/%x.o%j
+#SBATCH --error=/path/to/logdir/%x.o%j
 
 msg() { echo "$*" >&2; }
 die() { msg "!!! $*"; exit 1; }
