@@ -1,6 +1,6 @@
-venv
+venv*
 logs
 output
 data
-scripts/real-*
+scripts/real*
 containers
