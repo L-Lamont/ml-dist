@@ -1,0 +1,59 @@
+#!/bin/bash
+
+#SBATCH --job-name=pytorch-lightning-jobname
+#SBATCH --partition=example-partition
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --constraint=a-gpu-constraint
+#SBATCH --output=/path/to/logdir/%x.o%j
+#SBATCH --error=/path/to/logdir/%x.o%j
+
+msg() { printf "$*\n" >&2; }
+die() { msg "!!! $*"; exit 1; }
+log() { msg "### $*"; }
+
+module purge &> /dev/null
+module load slurm
+module load openmpi
+module load cuda
+module load python
+
+TEST_NAME="$SLURM_JOB_NAME"
+TRAIN_SCRIPT_NAME="base_training.py" # Set which script to use
+FRAMEWORK="pytorch-lightning"
+
+DATA="/path/to/ml-dist/data/$FRAMEWORK"
+TRAIN_SCRIPT="/path/to/ml-dist/frameworks/$FRAMEWORK/$TRAIN_SCRIPT_NAME"
+OUTPUT="/path/to/ml-dist/output/$TEST_NAME-$(date +%F.%T)"
+VENV="/path/to/ml-dist/venv"
+
+log "TEST_NAME: $TEST_NAME"
+log "FRAMEWORK: $FRAMEWORK"
+log "TRAIN_SCRIPT: $TRAIN_SCRIPT"
+log "OUTPUT: $OUTPUT"
+log "DATA: $DATA"
+log "VENV: $VENV"
+
+# Basic Checks
+[[ -f "$TRAIN_SCRIPT" ]] || die "Can't find $TRAIN_SCRIPT"
+
+[[ -f "$VENV/bin/activate" ]] || die "Can't find activate in $VENV"
+
+source "$VENV/bin/activate"
+[[ -z "$VIRTUAL_ENV" ]] && die "Can't activate $VENV"
+
+mkdir $OUTPUT
+[[ -d "$OUTPUT" ]] || die "OUTPUT directory not created"
+
+trainArgs="
+    --data-dir=$DATA
+    --output-dir=$OUTPUT
+"
+
+srunArgs="
+    --wait=60
+    --kill-on-bad-exit=1
+"
+
+msg "time srun $srunArgs python $TRAIN_SCRIPT $trainArgs"
+time srun $srunArgs python $TRAIN_SCRIPT $trainArgs
