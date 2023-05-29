@@ -2,11 +2,11 @@ import argparse
 
 import tensorflow as tf
 from tensorflow.keras import layers
-import horovod.tensorflow as hvd
+import horovod.tensorflow.keras as hvd
 
 def main():
     # Training settings
-    parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
+    parser = argparse.ArgumentParser(description='MNIST Example')
     parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                         help='input batch size for training (default: 64)')
     parser.add_argument('--test-batch-size', type=int, default=1000, metavar='N',
@@ -15,6 +15,8 @@ def main():
                         help='number of epochs to train (default: 16)')
     parser.add_argument('--lr', type=float, default=0.001, metavar='LR',
                         help='learning rate (default: 0.001)')
+    parser.add_argument('--steps-per-epoch', type=int, default=500,
+                        help='steps per epoch for training (default: 500)')
     # Unsupported argument kept for compatability
     parser.add_argument('--gamma', type=float, default=0.7, metavar='M',
                         help='Learning rate step gamma (default: 0.7)')
@@ -52,8 +54,14 @@ def main():
 
     tf.random.set_seed(args.seed)
 
-    (train_images, train_labels), (test_images, test_labels) = \
-        tf.keras.datasets.mnist.load_data(path=args.data_dir)
+    (mnist_images, mnist_labels), _ = \
+        tf.keras.datasets.mnist.load_data(path='{}/mnist-{}.npz'.format(args.data_dir, hvd.rank()))
+
+    dataset = tf.data.Dataset.from_tensor_slices(
+        (tf.cast(mnist_images[..., tf.newaxis] / 255.0, tf.float32),
+                 tf.cast(mnist_labels, tf.int64))
+    )
+    dataset = dataset.repeat().shuffle(10000).batch(args.batch_size)
 
     model = tf.keras.Sequential([
         layers.Conv2D(32, 3, activation='relu', input_shape=(28, 28, 1)),
@@ -63,7 +71,7 @@ def main():
         layers.Dense(10)
     ])
 
-    opt = tf.keras.optimizers.Adam(learning_rate=args.lr),
+    opt = tf.keras.optimizers.Adam(learning_rate=args.lr)
     opt = hvd.DistributedOptimizer(opt)
 
     model.compile(
@@ -72,24 +80,22 @@ def main():
         metrics=['accuracy']
     )
 
+    callbacks = [
+        hvd.callbacks.BroadcastGlobalVariablesCallback(0),
+        hvd.callbacks.MetricAverageCallback(),
+    ]
+
     if hvd.rank() == 0:
-        hvd.broadcast_variables
+        callbacks.append(tf.keras.callbacks.ModelCheckpoint('./checkpoint-{epoch}.h5'))
 
     model.fit(
-        x=train_images,
-        y=train_labels,
+        dataset,
+        steps_per_epoch=args.steps_per_epoch,
         epochs=args.epochs,
-        batch_size=args.batch_size,
-        shuffle=True,
+        callbacks=callbacks
     )
 
-    eval_loss, eval_acc = model.evaluate(
-        x=test_images,
-        y=test_labels,
-        batch_size=args.test_batch_size
-    )
-
-    if args.save_model:
+    if args.save_model and hvd.rank() == 0:
         tf.keras.Sequential.save("{}/mnist_model".format(args.output_dir))
 
 
