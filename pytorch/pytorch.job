@@ -1,0 +1,76 @@
+#!/bin/bash
+
+#SBATCH --job-name=pytorch-jobname
+#SBATCH --partition=example-partition
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --constraint=a-gpu-constraint
+#SBATCH --output=/path/to/logdir/%x.o%j
+#SBATCH --error=/path/to/logdir/%x.o%j
+
+msg() { printf "$*\n" >&2; }
+die() { msg "!!! $*"; exit 1; }
+log() { msg "### $*"; }
+
+module purge &> /dev/null
+module load slurm
+module load openmpi
+module load cuda
+module load python
+
+TEST_NAME="$SLURM_JOB_NAME"
+TRAIN_SCRIPT_NAME="base_training.py" # Set which script to use
+FRAMEWORK="pytorch"
+
+DATA="/path/to/ml-dist/data/$FRAMEWORK"
+TRAIN_SCRIPT="/path/to/ml-dist/frameworks/$FRAMEWORK/$TRAIN_SCRIPT_NAME"
+OUTPUT="/path/to/ml-dist/output/$TEST_NAME-$(date +%F.%T)"
+VENV="/path/to/ml-dist/venv"
+
+log "TEST_NAME: $TEST_NAME"
+log "FRAMEWORK: $FRAMEWORK"
+log "TRAIN_SCRIPT: $TRAIN_SCRIPT"
+log "OUTPUT: $OUTPUT"
+log "DATA: $DATA"
+log "VENV: $VENV"
+
+export TMPDIR="$TMPDIR_SHM"
+export MASTER_ADDR="$(scontrol show hostname "$SLURM_JOB_NODELIST" | head -n 1):29401"
+
+# Basic Checks
+[[ -f "$TRAIN_SCRIPT" ]] || die "Can't find $TRAIN_SCRIPT"
+
+[[ -f "$VENV/bin/activate" ]] || die "Can't find activate in $VENV"
+
+source "$VENV/bin/activate"
+[[ -z "$VIRTUAL_ENV" ]] && die "Can't activate $VENV"
+
+mkdir $OUTPUT
+[[ -d "$OUTPUT" ]] || die "OUTPUT directory not created"
+
+trainArgs="
+    --data-dir=$DATA
+    --output-dir=$OUTPUT
+"
+
+torchrunArgs="
+    --nproc_per_node $GPUS_PER_NODE 
+    --nnodes $SLURM_NNODES
+    --rdzv_endpoint $MASTER_ADDR
+    --rdzv_backend c10d
+"
+
+mpiArgs="
+    --np $SLURM_JOB_NUM_NODES
+    --bind-to none
+    -map-by slot
+    -x NCCL_DEBUG=INFO
+    -x NCCL_IB_GID_INDEX=3
+    -x LD_LIBRARY_PATH
+    -x PATH
+    -mca pml ob1
+    -mca btl ^openib
+"
+
+msg "time mpirun $mpiArgs torchrun $torchrunArgs $TRAIN_SCRIPT $trainArgs"
+time mpirun $mpiArgs torchrun $torchrunArgs $TRAIN_SCRIPT $trainArgs

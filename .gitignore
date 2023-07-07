@@ -2,5 +2,6 @@ venv*
 logs
 output
 data
-scripts/real*
-containers
+real*
+*.sif
+slurm-*.out
