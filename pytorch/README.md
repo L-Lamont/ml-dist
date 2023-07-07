@@ -8,12 +8,12 @@ some software required in installation.
 Pull the pytorch container from dockerhub and place it somewhere that will be 
 visible to your jobscript. By default apptainer uses a cache directory which is 
 placed in your home directory, some sites have limits to the size of your home 
-directories so updating the APPTAINER_CACHE environment variable so the limit 
+directories so updating the APPTAINER_CACHEDIR environment variable so the limit 
 is not increased is useful. The following 2 commands should be all that is 
 necessary to pull the container and update your cache location.
 
 ```
-APPTAINER_CACHE="/not/my/home/directory"
+APPTAINER_CACHEDIR="/not/my/home/directory"
 apptainer pull docker://pytorch/pytorch
 ```
 
