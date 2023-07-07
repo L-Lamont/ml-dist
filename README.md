@@ -1,12 +1,9 @@
 # ml-dist
-A collection of distributed and non-distributed ml examples and an example 
-jobscript for running them on a slurm managed cluster.
-
-## Creating a virtual environment
-- Use the scripts/venv-build.job to create the required venv
-  - Before use update the SBATCH parameters (it is important to build the venv on a compute node)
-  - nccl_path must be set if --horovod is being used
-  - mxnet examples require mxnet 2
+A collection of distributed and non-distributed ml examples and example 
+jobscripts for running them on a slurm managed cluster using virtual 
+environments and using containers. The README.md in each frameworks directory 
+gives a more detailed overview of the changes required and the jobscript for 
+each package.
 
 ## Modifying an example jobscript
 - Update the sbatch parameters
@@ -15,3 +12,4 @@ jobscript for running them on a slurm managed cluster.
 - Ensure $DATA exists
 - Ensure the parent of $OUTPUT exists
 - Add specific environment variables e.g. proxy variables
+- Download required container or build required virtual environment
