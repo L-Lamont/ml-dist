@@ -65,7 +65,7 @@ container, to do this use the add the `apptainer run pytorch_latest.sif` command
 before `torchrun`. It requires 2 arguments `nv` to allow the container to 
 use cuda gpus and `B` to set the bindpath it is easiest to bind in the root 
 directory of your project so you do not have to change other arguments (This is 
-what is done in ml-dist/pytorch/ddp_pytorch.job).jj
+what is done in ml-dist/pytorch/ddp_pytorch.job).
 
 ### Usage
 The following specifies the changes to ml-dist/pytorch/ddp_pytorch.job that 
