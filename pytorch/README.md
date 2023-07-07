@@ -162,7 +162,7 @@ training though.
 #### Containers
 Similiarly to PyTorch Distributed Data Parallel you can pull a pre-built 
 container from dockerhub. The same issues with cache directories persist so be 
-sure to update the APPTAINER_CACHE environment variable.
+sure to update the APPTAINER_CACHEDIR environment variable.
 
 #### Venv
 The example script ml-dist/pytorch/venv_build.job includes an example of how to
