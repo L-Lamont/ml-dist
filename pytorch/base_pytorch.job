@@ -27,7 +27,7 @@ export https_proxy="http://example_proxy.com"
 USE_CONTAINER=0
 
 # Update 
-TEST_NAME="$SLURM_JOB_NAME"
+TEST_NAME="${SLURM_JOB_NAME}"
 TRAIN_SCRIPT_NAME="training.py" # Set which script to use
 FRAMEWORK="pytorch"
 CONTAINER_NAME="pytorch_latest.sif"
@@ -36,36 +36,36 @@ CONTAINER_NAME="pytorch_latest.sif"
 ML_DIST_PATH="/path/to/ml-dist"
 DATA="${ML_DIST_PATH}/${FRAMEWORK}/data"
 TRAIN_SCRIPT="${ML_DIST_PATH}/${FRAMEWORK}/${TRAIN_SCRIPT_NAME}"
-OUTPUT="${ML_DIST_PATH}/$FRAMEWORK/output/$TEST_NAME-$(date +%F.%T)"
-VENV="${ML_DIST_PATH}/$FRAMEWORK/venv"
-CONTAINER="${ML_DIST_PATH}/$FRAMEWORK/$CONTAINER_NAME"
+OUTPUT="${ML_DIST_PATH}/$FRAMEWORK/output/${TEST_NAME}-$(date +%F.%T)"
+VENV="${ML_DIST_PATH}/${FRAMEWORK}/venv"
+CONTAINER="${ML_DIST_PATH}/${FRAMEWORK}/${CONTAINER_NAME}"
 
-log "TEST_NAME: $TEST_NAME"
-log "FRAMEWORK: $FRAMEWORK"
-log "TRAIN_SCRIPT: $TRAIN_SCRIPT"
-log "OUTPUT: $OUTPUT"
-log "DATA: $DATA"
-log "VENV: $VENV"
-log "CONTAINER: $CONTAINER"
+log "TEST_NAME: ${TEST_NAME}"
+log "FRAMEWORK: ${FRAMEWORK}"
+log "TRAIN_SCRIPT: ${TRAIN_SCRIPT}"
+log "OUTPUT: ${OUTPUT}"
+log "DATA: ${DATA}"
+log "VENV: ${VENV}"
+log "CONTAINER: ${CONTAINER}"
 
-export TMPDIR="$TMPDIR_SHM" # Stops pytorch errors from being on a network file system
+export TMPDIR="${TMPDIR_SHM}" # Stops pytorch errors from being on a network file system
 
 # Basic Checks
-[[ -f "$TRAIN_SCRIPT" ]] || die "Can't find $TRAIN_SCRIPT"
+[[ -f "${TRAIN_SCRIPT}" ]] || die "Can't find ${TRAIN_SCRIPT}"
 
-mkdir $OUTPUT
-[[ -d "$OUTPUT" ]] || die "OUTPUT directory not created"
+mkdir "${OUTPUT}"
+[[ -d "${OUTPUT}" ]] || die "OUTPUT directory not created"
 
 trainArgs="
-    --data-dir=$DATA
-    --output-dir=$OUTPUT
+    --data-dir=${DATA}
+    --output-dir=${OUTPUT}
 "
 
 if [[ ${USE_CONTAINER} == 0 ]]; then
     log "Using venv: ${VENV}"
-    [[ -f "$VENV/bin/activate" ]] || die "Can't find activate in $VENV"
-    source "$VENV/bin/activate"
-    [[ -z "$VIRTUAL_ENV" ]] && die "Can't activate $VENV"
+    [[ -f "${VENV}/bin/activate" ]] || die "Can't find activate in ${VENV}"
+    source "${VENV}/bin/activate"
+    [[ -z "${VIRTUAL_ENV}" ]] && die "Can't activate ${VENV}"
 
     time python ${TRAIN_SCRIPT} ${trainArgs}
 else
