@@ -1,5 +1,5 @@
 # PyTorch
-This details the process of distributing pytorch to multiple nodes on a 
+This details the process of distributing pytorch to multiple servers on a 
 slurm managed cluster. It also assumes a module system is availble for loading
 some software required in installation.
 
@@ -23,10 +23,10 @@ at ml-dist/pytorch/venv_build.job. The SBATCH parameters, proxy variables (if
 required), module versions loaded and some variables will need to be updated 
 before use.
 
-Building on the nodes you plan to run the training on can help reduce the 
+Building on the servers you plan to run the training on can help reduce the 
 number of errors that occur because software is built for a different 
 environment, because of this the example script is a jobscript which can be 
-submitted to slurm and on a targeted architecture. Similiar errors can also 
+submitted to slurm and run on a targeted architecture. Similiar errors can also 
 arise when the modules loaded at build time are not the same as the modules 
 loaded at runtime. Purging all modules using `module purge` and then loading in 
 the specific versions required is helpful to minimise these errors.
@@ -40,10 +40,10 @@ a container. The methods used to start training are very similiar using the
 container just adds one level of complexity to the launch process.
 
 ### Environment Variables
-`MASTER_ADDR` should be set to one the address of one of the nodes being used a 
-random port should be appended to it, this is then past to the rndzv_endpoint 
+`MASTER_ADDR` should be set to one the address of one of the servers being used 
+a random port should be appended to it, this is then past to the rndzv_endpoint 
 argument of `torchrun`. Utilising scontrol is a simple way to get the name of 
-node when the addresses could be changing depending on the nodes you are 
+server when the addresses could be changing depending on the servers you are 
 allocated. In multi server training you may also need to set and pass to MPI 
 the `NCCL_IB_GID_INDEX`, it controls the global ID used in RoCE mode and had to 
 be set to 3 for multi server training to work (it may be set automatically by 
@@ -51,13 +51,13 @@ slurm so it is not always required)
 
 ### Venv
 `torchrun` is used to start multiple versions of the training script on a single 
-node, each script then uses a unique GPU to run on and communication between 
+server, each script then uses a unique GPU to run on and communication between 
 them is controlled by the `rdzv_endpoint` and `rdzv_backend` torchrun arguments. 
-To launch for multiple nodes we prepend the `mpirun` command to that which then 
-launches a copy of torchrun per node and training continues the same as before.
-An important thing to remember is that the number of tasks per node (controlled 
-by `#SBATCH --ntasks-per-node`) is always 1 and the number of GPUs used per node 
-is controlled via the torchrun arguments.
+To launch for multiple servers we prepend the `mpirun` command to that which 
+then launches a copy of torchrun per server and training continues the same as 
+before. An important thing to remember is that the number of tasks per server 
+(controlled by `#SBATCH --ntasks-per-node`) is always 1 and the number of GPUs 
+used per server is controlled via the torchrun arguments.
 
 ### Apptainer
 If you are using Apptainer you now need to launch torchrun inside of a 
@@ -69,31 +69,32 @@ what is done in ml-dist/pytorch/ddp_pytorch.job).
 
 ### Usage
 The following specifies the changes to ml-dist/pytorch/ddp_pytorch.job that 
-are required before they will work.
+are required before it will work.
 
 SBATCH Parameters
-- #SBATCH --nodes = number of nodes
+- #SBATCH --nodes = number of servers
 - #SBATCH --job-name = name of the job (used in output naming in example script)
 - #SBATCH --partition = the queue or partition to use
-- #SBATCH --constraint = the constraint to target a specific machine
+- #SBATCH --constraint = the constraint to target a specific server architecture
 
 The module versions loaded needed to be added (`module load python/3.11.2`). The
-`ML_DIST_PATH` and `GPUS_PER_NODE` variable need to be changed to reflect the paths
-and number of gpus the servers being targeted have. If you need proxy variables 
-set you will also need to set the `http_proxy` and `https_proxy` environment 
-variables, but these are not always required. There are several variables that
-could be updated like the `CONTAINER_NAME` and `TRAIN_SCRIPT`. It is important 
-also to check that all paths are correct, `ddp_pytorch.job` is written to run the
-example jobs which place output and data in known places if you are modifying 
-these locations then the paths will have to be updated (be sure that they are
-available in the container by updating the bindpath in apptainerArgs too).
+`ML_DIST_PATH` and `GPUS_PER_NODE` variables need to be changed to reflect the 
+paths and number of gpus the servers being targeted have. If you need proxy 
+variables set you will also need to set the `http_proxy` and `https_proxy` 
+environment variables, but these are not always required. There are several 
+variables that could be updated like the `CONTAINER_NAME` and `TRAIN_SCRIPT`. 
+It is important also to check that all paths are correct, `ddp_pytorch.job` is 
+written to run `ddp_training.py` which writes output to and reads data from 
+known places if you are modifying these locations then the paths will have to 
+be updated (be sure that they are available in the container by updating the 
+bindpath in apptainerArgs too).
 
 ## Changes to training.py
 There are no changes to the training script if you are using a virtual 
 environment or a container. 
 
 A full example of a distributed data parallel script can be found at 
-ml-dist/pytorch/ddp_example.py, an example of a single GPU training script 
+ml-dist/pytorch/ddp_training.py, an example of a single GPU training script 
 can be found at ml-dist/pytorch/base_training.py. The changes required to 
 implement distributed data parallel are outlined below.
 ```
@@ -148,34 +149,34 @@ if dist.rank == 0:
 dist.destroy_process_group()
 ```
 
-### Other Distribution Strategies
+## Other Distribution Strategies
 PyTorch distributed data parallel is not the only option for distributing 
 PyTorch training, you can also use horovod which was originally developed by 
-Uber, Accelerate developed by HuggingFace.
+Uber.
 
-## Horovod
+### Horovod
 Horovod uses MPI to distribute training to multiple GPUs rather than the 
 inbuilt distributed data parallel. It stil uses data parallelism to distribute 
 training though.
 
-### Installation
-#### Containers
+#### Installation
+##### Apptainer
 Similiarly to PyTorch Distributed Data Parallel you can pull a pre-built 
 container from dockerhub. The same issues with cache directories persist so be 
 sure to update the APPTAINER_CACHEDIR environment variable.
 
-#### Venv
+##### Virtual Environment
 The example script ml-dist/pytorch/venv_build.job includes an example of how to
 build horovod it requires a few extra environment variables, update the 
-`INSTALL_HOROVOD` variable to 1 to create a virtual environment with horovod 
-you will also need to update the `NCCL_PATH` variable which is passed to 
-horovod during the build stage.
+`INSTALL_HOROVOD` variable to 1 to create a virtual environment with horovod you 
+will also need to update the `NCCL_PATH` variable which is passed to horovod 
+during the build stage.
 
 #### Jobscript
 An example jobscript is provided at ml-dist/pytorch/horovod_pytorch.job When 
 using horovod torchrun is no longer required instead mpirun can be used to 
-launch all the processes. This means the sbatch parameter ntasks-per-node can 
-now be used to control the number of tasks to launch per node. The `np` 
+launch all the processes. This means the sbatch parameter `ntasks-per-node` can 
+now be used to control the number of tasks to launch per server. The `np` 
 argument will now be `$SLURM_NTASKS` instead of `$SLURM_JOB_NUM_NODES` and the 
 torchrun will be emitted leaving new submission commands like the following 
 
@@ -196,5 +197,5 @@ mpirun $mpiArgs apptainer run $apptainerArgs
 
 #### Usage
 The only difference to slurm parameters between horovod and pytorch ddp is 
-the `--ntasks-per-node` SBATCH parameter is set to the number of GPUs per node 
-when using horovod, as mpirun launches all processes.
+the `--ntasks-per-node` SBATCH parameter is set to the number of GPUs per 
+server when using horovod, as mpirun launches all processes.
