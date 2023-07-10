@@ -61,7 +61,7 @@ trainArgs="
     --output-dir=${OUTPUT}
 "
 
-if [[ ${USE_CONTAINER} == 0 ]]; then
+if [[ "${USE_CONTAINER}" == 0 ]]; then
     log "Using venv: ${VENV}"
     [[ -f "${VENV}/bin/activate" ]] || die "Can't find activate in ${VENV}"
     source "${VENV}/bin/activate"
