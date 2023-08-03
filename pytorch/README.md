@@ -39,6 +39,7 @@ USE_CONTAINER variable to toggle between launching in a virtual environment and
 a container. The methods used to start training are very similiar using the 
 container just adds one level of complexity to the launch process.
 
+
 ### Environment Variables
 `MASTER_ADDR` should be set to one the address of one of the servers being used 
 a random port should be appended to it, this is then past to the rndzv_endpoint 
@@ -48,6 +49,7 @@ allocated. In multi server training you may also need to set and pass to MPI
 the `NCCL_IB_GID_INDEX`, it controls the global ID used in RoCE mode and had to 
 be set to 3 for multi server training to work (it may be set automatically by 
 slurm so it is not always required)
+
 
 ### Venv
 `torchrun` is used to start multiple versions of the training script on a single 
@@ -149,30 +151,30 @@ if dist.rank == 0:
 dist.destroy_process_group()
 ```
 
-## Other Distribution Strategies
+# Other Distribution Strategies
 PyTorch distributed data parallel is not the only option for distributing 
 PyTorch training, you can also use horovod which was originally developed by 
 Uber.
 
-### Horovod
+## Horovod
 Horovod uses MPI to distribute training to multiple GPUs rather than the 
 inbuilt distributed data parallel. It stil uses data parallelism to distribute 
 training though.
 
-#### Installation
-##### Apptainer
+### Installation
+#### Apptainer
 Similiarly to PyTorch Distributed Data Parallel you can pull a pre-built 
 container from dockerhub. The same issues with cache directories persist so be 
 sure to update the APPTAINER_CACHEDIR environment variable.
 
-##### Virtual Environment
+#### Virtual Environment
 The example script ml-dist/pytorch/venv_build.job includes an example of how to
 build horovod it requires a few extra environment variables, update the 
 `INSTALL_HOROVOD` variable to 1 to create a virtual environment with horovod you 
 will also need to update the `NCCL_PATH` variable which is passed to horovod 
 during the build stage.
 
-#### Jobscript
+### Jobscript
 An example jobscript is provided at ml-dist/pytorch/horovod_pytorch.job When 
 using horovod torchrun is no longer required instead mpirun can be used to 
 launch all the processes. This means the sbatch parameter `ntasks-per-node` can 
@@ -195,7 +197,7 @@ apptainerArgs="
 mpirun $mpiArgs apptainer run $apptainerArgs
 ```
 
-#### Usage
+### Usage
 The only difference to slurm parameters between horovod and pytorch ddp is 
 the `--ntasks-per-node` SBATCH parameter is set to the number of GPUs per 
 server when using horovod, as mpirun launches all processes.

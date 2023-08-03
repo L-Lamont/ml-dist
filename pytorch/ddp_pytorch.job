@@ -28,7 +28,7 @@ USE_CONTAINER=0
 
 # Update 
 TEST_NAME="${SLURM_JOB_NAME}"
-TRAIN_SCRIPT_NAME="training.py" # Set which script to use
+TRAIN_SCRIPT_NAME="ddp_training.py" # Set which script to use
 FRAMEWORK="pytorch"
 CONTAINER_NAME="pytorch_latest.sif"
 GPUS_PER_NODE=1 # Set to number of gpus to be used per node
