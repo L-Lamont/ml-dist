@@ -1,0 +1,70 @@
+#!/bin/bash
+
+#SBATCH --job-name=pytorch-venv-build
+#SBATCH --partition=example-partition
+#SBATCH --nodes=1
+#SBATCH --constraint=example-constraint
+
+msg() { printf "$*\n" >&2; }
+die() { msg "!!! $*"; exit 1; }
+log() { msg "### $*"; }
+
+# Change the specific versions being loaded
+module purge
+module load python
+module load cuda
+module load nccl
+module load openmpi
+module load gcc 
+module load cmake
+
+# Set proxy variables (if necessary)
+export http_proxy="http://example_proxy.com"
+export https_proxy="http://example_proxy.com"
+
+# Select additional packages to install
+INSTALL_HOROVOD="1"
+
+# Update to the correct path and names
+VENV="$(pwd)/venv"
+NCCL_PATH="/path/to/nccl/" # Only required if installing horovod
+
+# Basic checks
+[[ -d "$(dirname ${VENV})" ]] || die "Parent directory of ${VENV} doesn't exist"
+[[ -d "${VENV}" ]] && die "${VENV} already exists refusing to overwrite it"
+
+log "Creating venv: ${VENV}"
+python -m venv "${VENV}"
+source "${VENV}/bin/activate"
+[[ -z "${VIRTUAL_ENV}" ]] && die "Can't activate venv at ${VENV}"
+log "Activated venv: ${VENV}"
+
+
+log "Upgrading pip and setuptools"
+pip install --no-cache-dir --upgrade pip setuptools
+
+# Update to the specific packages you need
+log "Installing pytorch"
+pip install --no-cache-dir torch torchaudio torchvision
+
+# It is important to install pytorch before you install horovod
+# Also note a requirements.txt does not specify an order for installation so it 
+# is best to be explicit with ordering when installing horovod
+if [[ "${INSTALL_HOROVOD}" == 1 ]]; then
+    export HOROVOD_WITH_PYTORCH=1
+    export HOROVOD_WITHOUT_TENSORFLOW=1
+    export HOROVOD_WITHOUT_MXNET=1
+
+    # Set the NCCL & GPU operations environment variables
+    export HOROVOD_NCCL_HOME="${NCCL_PATH}"
+    export HOROVOD_NCCL_INCLUDE="${NCCL_PATH}/include"
+    export HOROVOD_NCCL_LIB="${NCCL_PATH}/lib"
+    export HOROVOD_GPU_OPERATIONS="NCCL"
+    export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${NCCL_PATH}"
+
+    log "Horovod Environment Variables"
+    printenv | grep HOROVOD
+
+    log "Installing horovod"
+    pip install --no-cache-dir horovod
+fi
