@@ -13,3 +13,10 @@ each package.
 - Ensure the parent of $OUTPUT exists
 - Add specific environment variables e.g. proxy variables
 - Download required container or build required virtual environment
+
+## Future Work
+- Elastic training examples
+- Model parallel examples
+- More distribution strategies (accelerate etc.)
+- More launching options (deepspeed)
+- Better checkpointing and logging examples (weights & biases)
