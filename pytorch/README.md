@@ -154,30 +154,30 @@ if dist.rank == 0:
 dist.destroy_process_group()
 ```
 
-# Other Distribution Strategies
+
+# Horovod
 PyTorch distributed data parallel is not the only option for distributing 
 PyTorch training, you can also use horovod which was originally developed by 
 Uber.
 
-## Horovod
 Horovod uses MPI to distribute training to multiple GPUs rather than the 
 inbuilt distributed data parallel. It stil uses data parallelism to distribute 
 training though.
 
-### Installation
-#### Apptainer
+## Installation
+### Apptainer
 Similiarly to PyTorch Distributed Data Parallel you can pull a pre-built 
 container from dockerhub. The same issues with cache directories persist so be 
 sure to update the APPTAINER_CACHEDIR environment variable.
 
-#### Virtual Environment
+### Virtual Environment
 The example script ml-dist/pytorch/venv_build.job includes an example of how to
 build horovod it requires a few extra environment variables, update the 
 `INSTALL_HOROVOD` variable to 1 to create a virtual environment with horovod you 
 will also need to update the `NCCL_PATH` variable which is passed to horovod 
 during the build stage.
 
-### Jobscript
+## Jobscript
 An example jobscript is provided at ml-dist/pytorch/horovod_pytorch.job When 
 using horovod torchrun is no longer required instead mpirun can be used to 
 launch all the processes. This means the sbatch parameter `ntasks-per-node` can 
@@ -185,10 +185,10 @@ now be used to control the number of tasks to launch per server. The `np`
 argument will now be `$SLURM_NTASKS` instead of `$SLURM_JOB_NUM_NODES` and the 
 torchrun will be emitted leaving new submission commands like the following 
 
-Virtual Environment
+### Virtual Environment
 `mpirun $mpiArgs python $TRAIN_SCRIPT $trainArgs`
 
-Container
+### Container
 ```
 CONTAINER=horovod_latest.sif # The path to the container
 apptainerArgs="
