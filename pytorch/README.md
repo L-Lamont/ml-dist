@@ -200,7 +200,41 @@ apptainerArgs="
 mpirun $mpiArgs apptainer run $apptainerArgs
 ```
 
-### Usage
+## Usage
 The only difference to slurm parameters between horovod and pytorch ddp is 
 the `--ntasks-per-node` SBATCH parameter is set to the number of GPUs per 
 server when using horovod, as mpirun launches all processes.
+
+## Changes
+```
+# import horovod
+import horovod.tensorflow.keras as hvd
+
+# Initialise horovod 
+hvd.init()
+
+# Use hvd.local_rank() so each process sees a unique GPU
+if torch.cuda.is_available():
+  torch.cuda.set_device(hvd.local_rank())
+
+# Scale the learning rate
+args.lr = args.lr * hvd.size()
+
+# Wrap your optimizer in hvd.DistributedOptimizer
+optimizer = optim.Adadelta(model.parameters(), lr=args.lr)
+optimizer = hvd.DistributedOptimizer(
+    optimizer,
+    named_parameters=model.named_parameters(),
+    op=hvd.Average
+)
+
+# Broadcast initial state
+hvd.broadcast_parameters(model.state_dict(), root_rank=0)
+hvd.broadcast_optimizer_state(optimizer, root_rank=0)
+
+# Use horovod.rank() to run certain commands only once for example certain log
+# messages and saving the model
+if args.save_model and hvd.rank() == 0:
+    torch.save(
+        model.state_dict(), "{}/mnist_cnn.pt".format(args.output_dir))
+```

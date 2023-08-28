@@ -175,7 +175,7 @@ Similiarly to TensorFlow mutli worker mirrored strategy you can pull a
 pre-built container from dockerhub. The same issues with cache directories 
 presist so be sure to update the `APPTAINER_CACHEDIR` environment variable.
 
-## Virtual Environment
+### Virtual Environment
 The example script `ml-dist/tensorflow/venv_build.job` includes an example of how 
 to build horovod it requries a few extra environment variables, update the 
 `INSTALL_HOROVOD` variable to 1 to create a virtual environment with horovod you 
@@ -209,7 +209,7 @@ tf.config.set_visible_devices(gpu, 'GPU')
 tf.config.experimental.set_memory_growth(gpu, True)
 
 # Scale the learning rate
-args.lr = args.lr * int(os.environ["SLURM_NTASKS"])
+args.lr = args.lr * hvd.size()
 
 # Wrap your optimizer in hvd.DistributedOptimizer
 opt = tf.keras.optimizers.Adam(learning_rate=args.lr)
