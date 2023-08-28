@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=tensorflow-base
+#SBATCH --job-name=tensorflow-example
 #SBATCH --partition=example-partition
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -19,22 +19,16 @@ module load nccl
 module load python
 module load apptainer
 
-# Set proxy variables (if necessary)
-# Can cause issues with multiworkermirroredstrategy
-export http_proxy="http://example_proxy.com"
-export https_proxy="http://example_proxy.com"
-
 export XLA_FLAGS="--xla_gpu_cuda_data_dir=${CUDA_PATH}" # required if cuda not in standard place
-export CUDA_VISIBLE_DEVICES=0 # ensures only 1 gpu is used
 
 # USE_CONTAINER=1 will launch using the container otherwise it will use the venv
 USE_CONTAINER=0
 
 # Update 
 TEST_NAME="${SLURM_JOB_NAME}"
-TRAIN_SCRIPT_NAME="base_training.py" # Set which script to use
+TRAIN_SCRIPT_NAME="horovod_training.py" # Set which script to use
 FRAMEWORK="tensorflow"
-CONTAINER_NAME="tensorflow.sif"
+CONTAINER_NAME="horovod_latest.sif"
 
 # Update the path
 ML_DIST_PATH="/path/to/ml-dist"
@@ -62,8 +56,26 @@ trainArgs="
     --data-dir=${DATA}
     --output-dir=${OUTPUT}
 "
+mpiArgs="
+    --np ${SLURM_NTASKS}
+    --bind-to none
+    -map-by slot
+    -x NCCL_DEBUG=INFO
+    -x NCCL_IB_GID_INDEX=3
+    -x LD_LIBRARY_PATH
+    -x PATH
+    -mca pml ob1
+    -mca btl ^openib
+"
 
-if [[ "${USE_CONTAINER}" == 1 ]]; then
+if [[ "${USE_CONTAINER}" == 0 ]]; then
+    log "Using venv: ${VENV}"
+    [[ -f "${VENV}/bin/activate" ]] || die "Can't find activate in ${VENV}"
+    source "${VENV}/bin/activate"
+    [[ -z "${VIRTUAL_ENV}" ]] && die "Can't activate ${VENV}"
+
+    time mpirun $mpiArgs python ${TRAIN_SCRIPT} ${trainArgs}
+else
     log "Using container: ${CONTAINER}"
     apptainerArgs="
         --nv
@@ -71,12 +83,5 @@ if [[ "${USE_CONTAINER}" == 1 ]]; then
         ${CONTAINER}
         python ${TRAIN_SCRIPT} ${trainArgs}
     "
-    time apptainer run ${apptainerArgs}
-else
-    log "Using venv: ${VENV}"
-    [[ -f "${VENV}/bin/activate" ]] || die "Can't find activate in ${VENV}"
-    source "${VENV}/bin/activate"
-    [[ -z "${VIRTUAL_ENV}" ]] && die "Can't activate ${VENV}"
-
-    time python ${TRAIN_SCRIPT} ${trainArgs}
+    time mpirun $mpiArgs apptainer run ${apptainerArgs}
 fi

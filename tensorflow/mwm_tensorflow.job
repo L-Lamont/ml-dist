@@ -1,9 +1,9 @@
 #!/bin/bash
 
-#SBATCH --job-name=tensorflow-base
+#SBATCH --job-name=tensorflow-mwm
 #SBATCH --partition=example-partition
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
+#SBATCH --ntasks-per-node=4
 #SBATCH --constraint=example-constraint
 
 msg() { printf "$*\n" >&2; }
@@ -19,20 +19,16 @@ module load nccl
 module load python
 module load apptainer
 
-# Set proxy variables (if necessary)
-# Can cause issues with multiworkermirroredstrategy
-export http_proxy="http://example_proxy.com"
-export https_proxy="http://example_proxy.com"
-
+# Unset proxy variables causes issue with mutliworkermirroredstrategy
+unset http_proxy https_proxy
 export XLA_FLAGS="--xla_gpu_cuda_data_dir=${CUDA_PATH}" # required if cuda not in standard place
-export CUDA_VISIBLE_DEVICES=0 # ensures only 1 gpu is used
 
 # USE_CONTAINER=1 will launch using the container otherwise it will use the venv
 USE_CONTAINER=0
 
 # Update 
 TEST_NAME="${SLURM_JOB_NAME}"
-TRAIN_SCRIPT_NAME="base_training.py" # Set which script to use
+TRAIN_SCRIPT_NAME="mwm_training.py" # Set which script to use
 FRAMEWORK="tensorflow"
 CONTAINER_NAME="tensorflow.sif"
 
@@ -63,6 +59,11 @@ trainArgs="
     --output-dir=${OUTPUT}
 "
 
+srunArgs="
+    --wait=60
+    --kill-on-bad-exit=1
+"
+
 if [[ "${USE_CONTAINER}" == 1 ]]; then
     log "Using container: ${CONTAINER}"
     apptainerArgs="
@@ -71,12 +72,12 @@ if [[ "${USE_CONTAINER}" == 1 ]]; then
         ${CONTAINER}
         python ${TRAIN_SCRIPT} ${trainArgs}
     "
-    time apptainer run ${apptainerArgs}
+    time srun $srunArgs apptainer run ${apptainerArgs}
 else
     log "Using venv: ${VENV}"
     [[ -f "${VENV}/bin/activate" ]] || die "Can't find activate in ${VENV}"
     source "${VENV}/bin/activate"
     [[ -z "${VIRTUAL_ENV}" ]] && die "Can't activate ${VENV}"
 
-    time python ${TRAIN_SCRIPT} ${trainArgs}
+    time srun $srunArgs python ${TRAIN_SCRIPT} ${trainArgs}
 fi
