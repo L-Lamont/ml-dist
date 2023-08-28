@@ -1,16 +1,19 @@
 # PyTorch
 This details the process of distributing pytorch to multiple servers on a 
 slurm managed cluster. It also assumes a module system is availble for loading
-some software required in installation.
+some software required in installation. Please note that this distributes a 
+mnist example so performance scaling can not be judged as the overhead of 
+training is much higher than the compute required for training.
 
 ## Installation
 ### Apptainer
 Pull the pytorch container from dockerhub and place it somewhere that will be 
 visible to your jobscript. By default apptainer uses a cache directory which is 
 placed in your home directory, some sites have limits to the size of your home 
-directories so updating the APPTAINER_CACHEDIR environment variable so the limit 
-is not increased is useful. The following 2 commands should be all that is 
-necessary to pull the container and update your cache location.
+directories so updating the APPTAINER_CACHEDIR environment variable to a path 
+not in your home directory can prevent some issues caused by your home 
+directory filling up. The following 2 commands should be all that is necessary 
+to pull the container and update your cache location.
 
 ```
 APPTAINER_CACHEDIR="/not/my/home/directory"
